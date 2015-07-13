@@ -20,7 +20,7 @@ package LBOX::NginxCfg;
 
 $SCRIPT_NAME = 'nginx-cfg';
 
-$VERSION = '0.0.2';
+$VERSION = '0.1.0';
 
 use feature qw(switch unicode_strings);
 use Cwd;
@@ -51,7 +51,7 @@ our($action,$comment,$vhost,$proxy_pass_url,$updateNginx);
 
 our $comment = $opt_c;
 
-$config_file = '/usr/share/nginx-cfg/config.pl';
+$config_file = '/opt/nginx-cfg/config.pl';
 
 -f $config_file or fail("Sorry, I can't find the required 'config.pl' file!\nPlease make sure it's at '$config_file'.");
 
@@ -257,8 +257,18 @@ sub updateNginx
 {
 
 	return if $opt_n;
-	&logger(1,"Reloading Nginx...");
-	`sudo service nginx reload`;
+	&logger(1,"Verifying Nginx configuration...");
+	my $testResult = `sudo nginx -t 2>&1`;
+	chomp $testResult;
+	if ($testResult =~ /test is successful/)
+	{
+		&logger(1,"Reloading Nginx...");
+		`sudo service nginx reload`;
+	}
+	else
+	{
+		die "Sorry, there is an issue with the Nginx configuration:\n$testResult\nNginx was NOT reloaded.\n";
+	}
 }
 
 ######### SUPPORT FUNCTIONS #########
@@ -283,4 +293,3 @@ sub logger
 }
 
 __END__
-
