@@ -1,3 +1,5 @@
+#!/bin/sh
+
 mkdir -p /opt
 rm -rf /opt/nginx-cfg
 cp -r * /opt/nginx-cfg
