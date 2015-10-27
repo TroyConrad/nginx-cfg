@@ -60,7 +60,7 @@ require $config_file;
 our $templateFile = $opt_t ||= 'default';
 $templateFile .= '.tt2';
 
--f $templates_dir/$templateFile or fail("Sorry, I can't find the required '$templateFile' file!\nPlease make sure it's at '$templates_dir'.");
+-f "$templates_dir/$templateFile" or fail("Sorry, I can't find the required '$templateFile' file!\nPlease make sure it's at '$templates_dir'.");
 
 if ($opt_a)
 {
