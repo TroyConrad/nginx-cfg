@@ -1,0 +1,47 @@
+### [% comment %] ###
+
+server {
+
+    listen      80;
+
+    server_name [% server_name %] www.[% server_name %];
+
+    access_log  off;
+
+    client_max_body_size    10m;
+
+    location    /   {
+
+        # we can only ever GET/HEAD these resources
+        limit_except GET {
+            deny    all;
+        }
+
+        # avoid passing along amazon headers
+        # http://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
+        proxy_hide_header x-amz-delete-marker;
+        proxy_hide_header x-amz-id-2;
+        proxy_hide_header x-amz-request-id;
+        proxy_hide_header x-amz-version-id;
+        
+        proxy_hide_header      Set-Cookie;
+        proxy_ignore_headers   Set-Cookie;
+        proxy_buffering        off;
+        proxy_intercept_errors on;
+        
+        resolver               8.8.8.8 valid=300s;
+        resolver_timeout       10s;
+        
+        # s3 replies with 403 if an object is inaccessible; essentially not found
+        #proxy_intercept_errors on;
+        #error_page 403 =404 /_error/http-404.html;
+
+        proxy_pass          [% proxy_pass_url %];
+
+        proxy_http_version  1.1;
+        proxy_set_header    Authorization       '';
+        #proxy_set_header    Host                $host;
+
+    }
+
+}

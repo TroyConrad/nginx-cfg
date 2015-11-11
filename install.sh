@@ -1,12 +1,18 @@
 #!/bin/sh
 
-# install.sh v1.0.1 21Oct2015 (Great Scott!)
+# install.sh v1.0.2 03Nov2015
 
 # Linux or bust!
 osName=`uname`
 if [ "$osName" != 'Linux' ]; then
         echo "Sorry, this script only works on Linux."
         exit
+fi
+
+# Only for the big kids
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root/sudo." 
+   exit 1
 fi
 
 echo "Installing dependencies..."
