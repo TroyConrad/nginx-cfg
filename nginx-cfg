@@ -330,7 +330,7 @@ sub updateNginx
 sub getCurrentDateTimeString
 {
 	my($sec,$min,$hour,$day,$mon,$year) = localtime;
-	return sprintf("%.4d-%.2d-%.2d-%.2d-%.2d-%.2d",$year+=1900,$mon+=1,$day.$hour,$min,$sec);
+	return sprintf("%.4d-%.2d-%.2d-%.2d-%.2d-%.2d",$year+=1900,$mon+=1,$day,$hour,$min,$sec);
 }
 
 #
