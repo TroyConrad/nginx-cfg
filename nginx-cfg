@@ -18,7 +18,7 @@ package LBOX::NginxCfg;
 
 our $SCRIPT_NAME = 'nginx-cfg';
 
-our $VERSION = '0.2.0b';
+our $VERSION = '0.2.0c';
 
 #use feature qw(say switch unicode_strings);
 use feature qw(say switch);
@@ -56,6 +56,12 @@ my $template_file = $opt_t;
 
 my $comment = $opt_c;
 
+if ($opt_V)
+{
+	say "$SCRIPT_NAME version $VERSION";
+	exit;
+}
+
 if ($opt_a)
 {
 	$vhost = $opt_a;
@@ -75,12 +81,6 @@ else
 {
 	say "You must specify -a (add), -l (list) or -r (remove).";
 	$opt_h = 1;
-}
-
-if ($opt_V)
-{
-	say "$SCRIPT_NAME version $VERSION";
-	exit;
 }
 
 if ($opt_h)
