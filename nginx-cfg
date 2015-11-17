@@ -41,7 +41,7 @@ our($NGINX_CONFIG_DIR,$TEMPLATES_DIR,$RETAINED_BACKUPS_CNT,$TEXT_EDITOR,$COMMON_
 
 my %opts = ();
 
-getopts('a:c:dl:r:t:u:hnv:V', \%opts); # process command line switches into $opts{*} vars
+getopts('a:c:de:l:r:t:u:hnv:V', \%opts); # process command line switches into $opts{*} vars
 
 our $VERBOSITY = $opts{v} ||= 1;
 
@@ -78,6 +78,7 @@ if ($opts{a})
 		$opts{h} = 1;
 	}
 }
+elsif ($opts{e}) { $vhost = $opts{e}; }
 elsif ($opts{l}) { $vhost = $opts{l}; }
 elsif ($opts{r}) { $vhost = $opts{r}; }
 else
