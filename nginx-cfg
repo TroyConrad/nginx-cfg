@@ -18,7 +18,7 @@ package LBOX::NginxCfg;
 
 our $SCRIPT_NAME = 'nginx-cfg';
 
-our $VERSION = '0.2.0a';
+our $VERSION = '0.2.0b';
 
 #use feature qw(say switch unicode_strings);
 use feature qw(say switch);
@@ -75,6 +75,12 @@ else
 {
 	say "You must specify -a (add), -l (list) or -r (remove).";
 	$opt_h = 1;
+}
+
+if ($opt_V)
+{
+	print "$SCRIPT_NAME version $VERSION"
+	exit;
 }
 
 if ($opt_h)
