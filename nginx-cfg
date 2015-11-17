@@ -18,7 +18,7 @@ package LBOX::NginxCfg;
 
 our $SCRIPT_NAME = 'nginx-cfg';
 
-our $VERSION = '0.2.0c';
+our $VERSION = '0.2.0e';
 
 #use feature qw(say switch unicode_strings);
 use feature qw(say switch);
@@ -39,51 +39,52 @@ our $CONFIG_FILE = '/opt/nginx-cfg/config.pl';
 
 our($NGINX_CONFIG_DIR,$TEMPLATES_DIR,$RETAINED_BACKUPS_CNT,$TEXT_EDITOR,$COMMON_CONFIG);
 
-my($opt_a,$opt_c,$opt_d,$opt_l,$opt_n,$opt_r,$opt_v,$opt_h,$opt_t,$opt_u,$opt_V);
-getopts('a:c:dl:r:t:u:hnv:V'); # process command line switches into $opt_* vars
+my %opts = ();
 
-our $VERBOSITY = $opt_v ||= 1;
+getopts('a:c:dl:r:t:u:hnv:V', \%opts); # process command line switches into $opts{*} vars
 
--f $CONFIG_FILE or fail("Sorry, the required config at '$CONFIG_FILE' can't be read.");
+our $VERBOSITY = $opts{v} ||= 1;
 
-our $UPDATE_NGINX = $opt_d ||= $opt_n;
-
-require $CONFIG_FILE;
-
-my ($proxy_pass_url,$vhost);
-
-my $template_file = $opt_t;
-
-my $comment = $opt_c;
-
-if ($opt_V)
+if ($opts{V})
 {
 	say "$SCRIPT_NAME version $VERSION";
 	exit;
 }
 
-if ($opt_a)
+-f $CONFIG_FILE or fail("Sorry, the required config at '$CONFIG_FILE' can't be read.");
+
+our $UPDATE_NGINX = $opts{d} ||= $opts{n};
+
+require $CONFIG_FILE;
+
+my ($proxy_pass_url,$vhost);
+
+my $template_file = $opts{t};
+
+my $comment = $opts{c};
+
+if ($opts{a})
 {
-	$vhost = $opt_a;
-	if ($opt_u)
+	$vhost = $opts{a};
+	if ($opts{u})
 	{
-		$proxy_pass_url = $opt_u;
+		$proxy_pass_url = $opts{u};
 	}
 	else
 	{
 		say "You must specify an upstream URL or AWS S3 bucket name with -u when using the -a (add) option.";
-		$opt_h = 1;
+		$opts{h} = 1;
 	}
 }
-elsif ($opt_l) { $vhost = $opt_l; }
-elsif ($opt_r) { $vhost = $opt_r; }
+elsif ($opts{l}) { $vhost = $opts{l}; }
+elsif ($opts{r}) { $vhost = $opts{r}; }
 else
 {
 	say "You must specify -a (add), -l (list) or -r (remove).";
-	$opt_h = 1;
+	$opts{h} = 1;
 }
 
-if ($opt_h)
+if ($opts{h})
 {
 	print <<EOS;
 $SCRIPT_NAME version $VERSION
@@ -155,7 +156,7 @@ logger(1,"$SCRIPT_NAME version $VERSION started.");
 if ($vhost) { $vhost =~ m/\w+\.\w+/ || fail("'$vhost' is not a valid fully qualified domain name."); }
 else		{ fail("Please specifiy a fully qualified domain name (FQDN) to add/update or remove."); }
 
-if ($opt_a)
+if ($opts{a})
 {
 	logger(1,"Adding site '$vhost'... ");
 	addDomain($vhost,$template_file,$proxy_pass_url,$comment) || fail("Configuration failed.");
@@ -163,14 +164,14 @@ if ($opt_a)
 	updateNginx();
 }
 
-if ($opt_l)
+if ($opts{l})
 {
 	logger(1,"Listing site '$vhost'... ");
 	listDomain($vhost) || fail("Query failed.");
 	logger(2,GREEN . 'OK' . RESET);
 }
 
-if ($opt_r)
+if ($opts{r})
 {
 	logger(1,"Removing site '$vhost'... ");
 	removeDomain($vhost) || fail("Configuration failed.");
