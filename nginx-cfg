@@ -4,63 +4,57 @@
 
 =head1 SYNOPSIS
 
-MODULE NAME: er-nginx-admin 
+MODULE NAME: nginx-cfg 
 
-DESCRIPTION: Utility to add and remove ER domains in Nginx
+DESCRIPTION: Idempotent template-based Nginx configuration control
 
 NOTES: 
 
 AUTHOR: Troy Conrad, LBOX LLC. troy.conrad@lbox.com
 
-=VERSIONS: See end for version history
-
 =cut =======================================================
 
 package LBOX::NginxCfg;
 
-$SCRIPT_NAME = 'nginx-cfg';
+our $SCRIPT_NAME = 'nginx-cfg';
 
-$VERSION = '0.1.1';
+our $VERSION = '0.2.0a';
 
-use feature qw(switch unicode_strings);
-use Cwd;
+#use feature qw(say switch unicode_strings);
+use feature qw(say switch);
 use Getopt::Std;
 use Template;
-#use Net::DNS;
 use Term::ANSIColor qw(:constants);
+use File::Copy;
 #use Net::Ping;
-#use Time::HiRes;
-#use JSON::PP
-#use strict 'vars';
+use strict 'vars';
 
-binmode(STDOUT, ":utf8"); # suppresses UTF-related warnings
+#binmode(STDOUT, ":utf8"); # suppresses UTF-related warnings
 
 ######### CONFIGURATION #########
 
-my $cwd = getcwd;
+our $CONFIG_FILE = '/opt/nginx-cfg/config.pl';
 
 ######### MAIN PROGRAM #########
 
-getopts('a:c:l:r:t:u:hnv:'); # -d(ebug level) argument
+our($NGINX_CONFIG_DIR,$TEMPLATES_DIR,$RETAINED_BACKUPS_CNT,$TEXT_EDITOR,$COMMON_CONFIG);
 
-our($opt_a,$opt_c,$opt_l,$opt_n,$opt_r,$opt_v,$opt_h,$opt_t,$opt_u);
+my($opt_a,$opt_c,$opt_d,$opt_l,$opt_n,$opt_r,$opt_v,$opt_h,$opt_t,$opt_u,$opt_V);
+getopts('a:c:dl:r:t:u:hnv:V'); # process command line switches into $opt_* vars
 
 our $VERBOSITY = $opt_v ||= 1;
 
-our($action,$comment,$vhost,$proxy_pass_url,$updateNginx);
+-f $CONFIG_FILE or fail("Sorry, the required config at '$CONFIG_FILE' can't be read.");
 
-our $comment = $opt_c;
+our $UPDATE_NGINX = $opt_d ||= $opt_n;
 
-$config_file = '/opt/nginx-cfg/config.pl';
+require $CONFIG_FILE;
 
--f $config_file or fail("Sorry, I can't find the required 'config.pl' file!\nPlease make sure it's at '$config_file'.");
+my ($proxy_pass_url,$vhost);
 
-require $config_file;
+my $template_file = $opt_t;
 
-our $templateFile = $opt_t ||= 'default';
-$templateFile .= '.tt2';
-
--f "$templates_dir/$templateFile" or fail("Sorry, I can't find the required '$templateFile' file!\nPlease make sure it's at '$templates_dir'.");
+my $comment = $opt_c;
 
 if ($opt_a)
 {
@@ -71,21 +65,15 @@ if ($opt_a)
 	}
 	else
 	{
-		#print "You must specify an upstream URL with -u when using the -a (add) option.\n";
+		say "You must specify an upstream URL or AWS S3 bucket name with -u when using the -a (add) option.";
 		$opt_h = 1;
 	}
 }
-elsif ($opt_l)
-{
-	$vhost = $opt_l;
-}
-elsif ($opt_r)
-{
-	$vhost = $opt_r;
-}
+elsif ($opt_l) { $vhost = $opt_l; }
+elsif ($opt_r) { $vhost = $opt_r; }
 else
 {
-	#print "You must specify -a (add), -l (list) or -r (remove).\n";
+	say "You must specify -a (add), -l (list) or -r (remove).";
 	$opt_h = 1;
 }
 
@@ -98,30 +86,39 @@ Add, list and remove Nginx site configuration files.
 
 Usage:
 
-$SCRIPT_NAME [-a|-l|-r <site-name>] [-c comment] [-u <upstream-URL>] [-t <config-template>] [-h] [-n] [-v <1-4>]
+$SCRIPT_NAME [-a|-l|-r <site-name>] [-c comment] [-u <upstream-URL/S3-bucket>] [-t <config-template>] [-h] [-n] [-v <1-4>]
 
 Options:
 
-  -a <site-name>          Add a configuration for the site named 'site-name'.
-                          If the configuration already exists, update it.
+  -a/-u <site-name>     Add a configuration for the site named 'site-name'.
+                        If the configuration already exists, update it.
 
-  -c <comment>            Optional comment string to add to top of configuration file.
+  -c <comment>          Optional comment string to add to top of configuration file.
 
-  -h                      Show this Help screen and exit.
+  -h                    Show this Help screen and exit.
 
-  -l <site-name>          List the configuration file contents for the site named 'site-name'.
-  
-  -n                      Do Not update the running Nginx configuration after using -a or -r.
+  -l 					List ALL active sites.
+  -l <site-name>        List the configuration file contents for the site named 'site-name'.
+  -l /<regex-pattern>/  List any active configuration files matching regex pattern /<regex-pattern>/.
 
-  -r <site-name>          Remove the configuration for the site named 'site-name'.
+  -e <site-name>        Edit the configuration for the site named 'site-name'. 
 
-  -t <config-template>    Optional configuration Template (in '$templates_dir')
-                          to use when adding/updating a site.
-                          Default is the 'default' template.
+  -E <Editor-name>      Specify a valid installed text editor for use with -e edit option.
+  						Default is 
 
-  -u <upstream-URL>       The Upstream URL to proxy traffic to. Required when using the -a option.
+  -d/-n                 Do Not update the running Nginx configuration after using -a or -r.
 
-  -v <0-4>                Specify the verbosity of console output, higher numbers are more verbose. Default is 1.
+  -r <site-name>        Remove the configuration for the site named 'site-name'.
+
+  -t <config-template>  Optional configuration Template to use when adding/updating a site.
+  						Stored in '$TEMPLATES_DIR'.
+                        Default is the 'default' template.
+
+  -u <upstream-URL>     The Upstream URL to or Amazon AWS S3 bucker name to proxy traffic to.
+  						Required when using the -a option.
+
+  -v <0-4>              Specify the verbosity of console output, higher numbers are more verbose.
+  						Default is 1.
 
 Examples:
 
@@ -147,54 +144,63 @@ EOS
 	exit;
 }
 
-&logger(1,"$SCRIPT_NAME version $VERSION started.");
+logger(1,"$SCRIPT_NAME version $VERSION started.");
 
-if ($vhost)
-{
-	$vhost =~ m/\w+\.\w+/ || fail("'$vhost' is not a valid fully qualified domain name."); 
-}
-else
-{
-	fail("Please specifiy a fully qualified domain name (FQDN) to add/update or remove.");
-}
+if ($vhost) { $vhost =~ m/\w+\.\w+/ || fail("'$vhost' is not a valid fully qualified domain name."); }
+else		{ fail("Please specifiy a fully qualified domain name (FQDN) to add/update or remove."); }
 
 if ($opt_a)
 {
-	&logger(1,"Adding site '$vhost'... ");
-	&addDomain($vhost,$templateFile,$comment) || fail("Configuration failed.");
-	&logger(2,GREEN . 'OK' . RESET);
-	&updateNginx();
+	logger(1,"Adding site '$vhost'... ");
+	addDomain($vhost,$template_file,$proxy_pass_url,$comment) || fail("Configuration failed.");
+	logger(2,GREEN . 'OK' . RESET);
+	updateNginx();
 }
+
 if ($opt_l)
 {
-	&logger(1,"Listing site '$vhost'... ");
-	&listDomain($vhost) || fail("Query failed.");
-	&logger(2,GREEN . 'OK' . RESET);
+	logger(1,"Listing site '$vhost'... ");
+	listDomain($vhost) || fail("Query failed.");
+	logger(2,GREEN . 'OK' . RESET);
 }
 
 if ($opt_r)
 {
-	&logger(1,"Removing site '$vhost'... ");
-	&removeDomain($vhost) || fail("Configuration failed.");
-	&logger(2,GREEN . 'OK' . RESET);
-	&updateNginx();
+	logger(1,"Removing site '$vhost'... ");
+	removeDomain($vhost) || fail("Configuration failed.");
+	logger(2,GREEN . 'OK' . RESET);
+	updateNginx();
 }
 
 ######### CORE FUNCTIONS #########
 
 sub addDomain
 {
-	my $domain_name = shift;
-	my $templateFile = shift;
+	my ($domain_name,$template_name,$proxy_pass_url,$comment) = @_;
 
 	my $filename = $domain_name;
 	$filename =~ tr'.'_';
 
-	my $nginx_filename = "$filename.conf";
+ 	$template_name ||= 'default';
+	$template_name .= '.tt2';
+
+	my $template_file = "$TEMPLATES_DIR/$template_name";
+
+	-f $template_file or fail("Sorry, I can't find the required '$template_file' file!\nPlease make sure it's in '$TEMPLATES_DIR'.");
+
+	my $nginx_available_dir = "$NGINX_CONFIG_DIR/sites-available";
+	my $nginx_enabled_dir	= "$NGINX_CONFIG_DIR/sites-enabled";
+
+	my $dest_file = "$nginx_available_dir/$filename" . getCurrentDateTimeString() . ".conf";
+
+	if (-e $dest_file)
+	{
+		unlink($dest_file) || die "Could not delete '$dest_file': $!\n";
+	}
 
 	my $t_config = {
-		ABSOLUTE => 1,
-		POST_CHOMP => 1	# cleanup whitespace
+		ABSOLUTE	=> 1,
+		POST_CHOMP	=> 1 # cleanup whitespace
 	};
 	
 	# create Template object
@@ -204,53 +210,75 @@ sub addDomain
 
 	# define template variables for replacement
 	my $t_vars = {
-	    filename			=> $filename,
-	    comment				=> $comment,
-	    server_name			=> $domain_name,
-	    proxy_pass_url		=> $proxy_pass_url,
-	    common_config		=> $common_config
+	    filename		=> $dest_file,
+	    comment			=> $comment,
+	    server_name		=> $domain_name,
+	    proxy_pass_url	=> $proxy_pass_url,
+	    common_config	=> $COMMON_CONFIG
 	 };
-	
-	my $destFile = "$nginx_sites_dir/$nginx_filename";
 
-	if (-e $destFile)
+	$template->process($template_file, $t_vars, $dest_file)
+		|| die $template->error(), "\n";
+
+	my $dest_link = "$nginx_enabled_dir/$filename.conf";
+
+	if (-e $dest_link)
 	{
-		unlink($destFile) || die "Could not delete '$destFile': $!\n";
+		unlink($dest_link) || die "Could not delete '$dest_link': $!\n";
 	}
 
-	$template->process("$templates_dir/$templateFile", $t_vars, $destFile)
-		|| die $template->error(), "\n";
+	symlink($dest_file,$dest_link);
 }
 
 #
 
 sub listDomain
 {
-	my $domain_name = shift;
+	my $nginx_filename = getConfigFilename(@_);
 
-	my $filename = $domain_name;
-	$filename =~ tr'.'_';
+	say "Showing '$nginx_filename':\n" . `cat $nginx_filename`;
+}
 
-	my $nginx_filename = "$nginx_sites_dir/$filename.conf";
+#
 
-	-f $nginx_filename or fail("Could not read '$nginx_filename'");
+sub editDomain
+{
+	my $nginx_filename = getConfigFilename(@_);
 
-	print "Showing '$nginx_filename':\n\n" . `cat $nginx_filename`;
+	if (`which $TEXT_EDITOR`)
+	{
+		say "Editing '$nginx_filename'...";
+		exec "$TEXT_EDITOR $nginx_filename";
+	}
+	else
+	{
+		say "Please specify a valid installed text editor with '-E' option or in '$CONFIG_FILE'.";
+		return;
+	}
 }
 
 #
 
 sub removeDomain
 {
-	my $domain_name = shift;
+	shift;
+	tr'.'_';
 
-	my $filename = $domain_name;
-	$filename =~ tr'.'_';
+	my $filename = "$NGINX_CONFIG_DIR/sites-enabled/$_.conf";
 
-	my $nginx_filename = "$filename.conf";
+	unlink($filename) || die "Could not delete '$filename': $!\n";
+}
 
-	unlink("$nginx_sites_dir/$nginx_filename")
-		|| die "Could not delete '$nginx_sites_dir/$nginx_filename': $!\n";
+#
+
+sub getConfigFilename
+{
+	shift;
+	tr'.'_';
+
+	my $filename = "$NGINX_CONFIG_DIR/sites-available/$_.conf";
+	-f $filename or fail("There is no $_ config at $filename");
+	return $filename;
 }
 
 #
@@ -258,25 +286,34 @@ sub removeDomain
 sub updateNginx
 {
 
-	return if $opt_n;
-	&logger(1,"Verifying Nginx configuration...");
+	logger(1,"Verifying Nginx configuration...");
 	my $testResult = `sudo nginx -t 2>&1`;
-	chomp $testResult;
 	if ($testResult =~ /test is successful/)
 	{
-		&logger(1,"Reloading Nginx...");
-		`sudo service nginx reload`;
+		my $reload_cmd = "sudo service nginx reload";
+		if ($UPDATE_NGINX)
+		{
+			logger("Dry run mode enabled, run '$reload_cmd' to reload Nginx.");
+		}
+		else
+		{
+			logger('Reloading Nginx...');
+			`sudo service nginx reload`;
+		}
 	}
 	else
 	{
-		die "Sorry, there is an issue with the Nginx configuration:\n$testResult\nNginx was NOT reloaded.\n";
+		fail("Sorry, Nginx configuration test FAILED:\n$testResult\nNginx was NOT reloaded.");
 	}
 }
 
-######### SUPPORT FUNCTIONS #########
+######### GENERAL FUNCTIONS #########
 
-sub GREEN_CHAR	{ "\x{2705}" } # Unicode Green Checkbox
-sub RED_CHAR	{ "\x{2757}" } # Unicode Red Exclamation
+sub getCurrentDateTimeString
+{
+	my($sec,$min,$hour,$day,$mon,$year) = localtime;
+	return sprintf("%.4d%.2d%.2d%.2d:%.2d:%.2d",$year+=1900,$mon+=1,$day.$hour,$min,$sec);
+}
 
 #
 
@@ -287,9 +324,10 @@ sub fail { die RED . shift . RESET . "\nExiting.\n"; }
 sub logger
 {
 	my($level,$msg,$noNewLine) = @_;
+	($msg,$noNewLine) = @_ unless ( int($level) > 0 and int($level) > 0);
 	if ($VERBOSITY >= $level)
 	{
-		print '>' x ($level-1) , "\t" x ($level-1) , $msg;
+		print '|' x ($level-1) , "\t" x ($level-1) , $msg;
 		print "\n" unless $noNewLine;
 	}
 }

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# install.sh v1.0.2 03Nov2015
+# install.sh v1.0.3 11Nov2015
 
 # Linux or bust!
 osName=`uname`
@@ -30,6 +30,8 @@ mkdir -p $installPath
 cp -r * $installPath
 ln -fs $installPath/$scriptName $binPath
 chmod ugo+rx $binPath
+
+$binPath -V
 
 echo "Installation complete.\n"
 

@@ -1,8 +1,12 @@
-$templates_dir = '/opt/nginx-cfg/templates';
+$TEMPLATES_DIR = '/opt/nginx-cfg/templates';
 
-$nginx_sites_dir = '/etc/nginx/sites-enabled';
+$NGINX_CONFIG_DIR = '/etc/nginx/sites-enabled';
 
-$common_config = <<'EOS';
+$RETAINED_BACKUPS_CNT = 10;
+
+$TEXT_EDITOR = 'nano';
+
+$COMMON_CONFIG = <<'EOS';
 EOS
 
 1;
