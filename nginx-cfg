@@ -79,7 +79,7 @@ else
 
 if ($opt_V)
 {
-	print "$SCRIPT_NAME version $VERSION"
+	say "$SCRIPT_NAME version $VERSION";
 	exit;
 }
 
