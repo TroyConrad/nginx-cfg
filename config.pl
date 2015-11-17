@@ -1,6 +1,6 @@
 $TEMPLATES_DIR = '/opt/nginx-cfg/templates';
 
-$NGINX_CONFIG_DIR = '/etc/nginx/sites-enabled';
+$NGINX_CONFIG_DIR = '/etc/nginx';
 
 $RETAINED_BACKUPS_CNT = 10;
 
