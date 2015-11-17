@@ -18,7 +18,7 @@ package LBOX::NginxCfg;
 
 our $SCRIPT_NAME = 'nginx-cfg';
 
-our $VERSION = '0.2.0e';
+our $VERSION = '0.2.0f';
 
 #use feature qw(say switch unicode_strings);
 use feature qw(say switch);
@@ -62,6 +62,8 @@ my ($proxy_pass_url,$vhost);
 my $template_file = $opts{t};
 
 my $comment = $opts{c};
+
+$TEXT_EDITOR ||= 'nano';
 
 if ($opts{a})
 {
@@ -111,7 +113,7 @@ Options:
   -e <site-name>        Edit the configuration for the site named 'site-name'. 
 
   -E <Editor-name>      Specify a valid installed text editor for use with -e edit option.
-  						Default is 
+  						Default is $TEXT_EDITOR
 
   -d/-n                 Do Not update the running Nginx configuration after using -a or -r.
 
@@ -167,8 +169,16 @@ if ($opts{a})
 if ($opts{l})
 {
 	logger(1,"Listing site '$vhost'... ");
-	listDomain($vhost) || fail("Query failed.");
+	listDomain($vhost) || fail("Listing failed.");
 	logger(2,GREEN . 'OK' . RESET);
+}
+
+if ($opts{e})
+{
+	logger(1,"Editing site '$vhost'... ");
+	editDomain($vhost) || fail("Edit failed.");
+	logger(2,GREEN . 'OK' . RESET);
+	updateNginx();
 }
 
 if ($opts{r})
@@ -280,7 +290,7 @@ sub removeDomain
 
 sub getConfigFilename
 {
-	shift;
+	$_ = shift;
 	tr'.'_';
 
 	my $filename = "$NGINX_CONFIG_DIR/sites-available/$_.conf";
