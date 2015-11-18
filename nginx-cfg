@@ -196,13 +196,13 @@ sub addDomain
 {
 	my ($domain_name,$template_name,$proxy_pass_url,$comment) = @_;
 
-	logger(3,"Adding $domain_name using $template_name...");
-
 	my $filename = $domain_name;
 	$filename =~ tr'.'_';
 
  	$template_name ||= 'default';
-	$template_name .= '.tt2';
+	$template_name .= '.tt2' unless $template_name =~ /\.tt2$/; # append extention if needed
+
+	logger(3,"Adding $domain_name using $template_name...");
 
 	my $template_file = "$TEMPLATES_DIR/$template_name";
 
@@ -294,6 +294,7 @@ sub removeDomain
 {
 	shift;
 	tr'.'_';
+	s'.conf'';
 
 	my $filename = "$NGINX_CONFIG_DIR/sites-enabled/$_.conf";
 
@@ -306,12 +307,17 @@ sub removeDomain
 
 sub getConfigFilename
 {
-	$_ = shift;
+	shift;
 	tr'.'_';
+	s'.conf'';
 
-	my $filename = "$NGINX_CONFIG_DIR/sites-available/$_.conf";
-	-f $filename or fail("There is no $_ config at $filename");
-	return $filename;
+	#my $filename = "$NGINX_CONFIG_DIR/sites-available/$_.conf";
+	#return $filename if -f $filename;
+
+	my $filename = "$NGINX_CONFIG_DIR/sites-enabled/$_.conf";
+	return $filename if -f $filename;
+	
+	fail("There is no $_ config at $filename");
 }
 
 #
@@ -321,6 +327,8 @@ sub updateNginx
 
 	logger("Verifying Nginx configuration...");
 	my $testResult = `sudo nginx -t 2>&1`;
+	logger(3,"Test Result: $testResult");
+
 	if ($testResult =~ /test is successful/)
 	{
 		logger(2,GREEN . 'OK' . RESET);
@@ -363,7 +371,7 @@ sub logger
 	($msg,$noNewLine) = @_ unless ( int($level) > 0 and int($level) > 0);
 	if ($VERBOSITY >= $level)
 	{
-		print '|' x ($level-1) , "\t" x ($level-1) , $msg;
+		print '#' x ($level-1) , "\t" x ($level-1) , $msg;
 		print "\n" unless $noNewLine;
 	}
 }
