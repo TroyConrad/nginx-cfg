@@ -323,6 +323,7 @@ sub updateNginx
 	my $testResult = `sudo nginx -t 2>&1`;
 	if ($testResult =~ /test is successful/)
 	{
+		logger(2,GREEN . 'OK' . RESET);
 		my $reload_cmd = "sudo service nginx reload";
 		if ($UPDATE_NGINX)
 		{
