@@ -196,6 +196,8 @@ sub addDomain
 {
 	my ($domain_name,$template_name,$proxy_pass_url,$comment) = @_;
 
+	logger(3,"Adding $domain_name using $template_name...");
+
 	my $filename = $domain_name;
 	$filename =~ tr'.'_';
 
@@ -235,6 +237,8 @@ sub addDomain
 	    common_config	=> $COMMON_CONFIG
 	 };
 
+	logger(3,"Creating $dest_file...");
+
 	$template->process($template_file, $t_vars, $dest_file)
 		|| die $template->error(), "\n";
 
@@ -244,6 +248,8 @@ sub addDomain
 	{
 		unlink($dest_link) || die "Could not delete '$dest_link': $!\n";
 	}
+
+	logger(3,"Linking $dest_link to $dest_file...");
 
 	symlink($dest_file,$dest_link);
 
@@ -256,7 +262,7 @@ sub listDomain
 {
 	my $nginx_filename = getConfigFilename(@_);
 
-	say "Showing '$nginx_filename':\n" . `cat $nginx_filename`;
+	logger("Showing '$nginx_filename':\n" . `cat $nginx_filename`);
 
 	return 1;
 }
@@ -269,7 +275,7 @@ sub editDomain
 
 	if (`which $TEXT_EDITOR`)
 	{
-		say "Editing '$nginx_filename'...";
+		logger("Editing '$nginx_filename'...");
 		exec "$TEXT_EDITOR $nginx_filename";
 	}
 	else
