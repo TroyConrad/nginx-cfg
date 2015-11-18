@@ -154,14 +154,14 @@ EOS
 	exit;
 }
 
-logger(1,"$SCRIPT_NAME version $VERSION started.");
+logger("$SCRIPT_NAME version $VERSION started.");
 
 if ($vhost) { $vhost =~ m/\w+\.\w+/ || fail("'$vhost' is not a valid fully qualified domain name."); }
 else		{ fail("Please specifiy a fully qualified domain name (FQDN) to add/update or remove."); }
 
 if ($opts{a})
 {
-	logger(1,"Adding site '$vhost'... ");
+	logger("Adding site '$vhost'... ");
 	addDomain($vhost,$template_file,$proxy_pass_url,$comment) || fail("Configuration failed.");
 	logger(2,GREEN . 'OK' . RESET);
 	updateNginx();
@@ -169,14 +169,14 @@ if ($opts{a})
 
 if ($opts{l})
 {
-	logger(1,"Listing site '$vhost'... ");
+	logger("Listing site '$vhost'... ");
 	listDomain($vhost) || fail("Listing failed.");
 	logger(2,GREEN . 'OK' . RESET);
 }
 
 if ($opts{e})
 {
-	logger(1,"Editing site '$vhost'... ");
+	logger("Editing site '$vhost'... ");
 	editDomain($vhost) || fail("Edit failed.");
 	logger(2,GREEN . 'OK' . RESET);
 	updateNginx();
@@ -184,7 +184,7 @@ if ($opts{e})
 
 if ($opts{r})
 {
-	logger(1,"Removing site '$vhost'... ");
+	logger("Removing site '$vhost'... ");
 	removeDomain($vhost) || fail("Configuration failed.");
 	logger(2,GREEN . 'OK' . RESET);
 	updateNginx();
@@ -313,7 +313,7 @@ sub getConfigFilename
 sub updateNginx
 {
 
-	logger(1,"Verifying Nginx configuration...");
+	logger("Verifying Nginx configuration...");
 	my $testResult = `sudo nginx -t 2>&1`;
 	if ($testResult =~ /test is successful/)
 	{
