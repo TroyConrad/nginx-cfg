@@ -18,7 +18,7 @@ package LBOX::NginxCfg;
 
 our $SCRIPT_NAME = 'nginx-cfg';
 
-our $VERSION = '0.2.0g';
+our $VERSION = '0.2.0';
 
 #use feature qw(say switch unicode_strings);
 use feature qw(say switch);

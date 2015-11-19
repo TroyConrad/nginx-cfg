@@ -1,11 +1,13 @@
 #!/bin/sh
 
-# install.sh v1.0.3 11Nov2015
+# install.sh v1.0.4 18Nov2015
+
+scriptName="nginx-cfg"
 
 # Linux or bust!
 osName=`uname`
 if [ "$osName" != 'Linux' ]; then
-        echo "Sorry, this script only works on Linux."
+        echo "Sorry, $scriptName only works on Linux."
         exit
 fi
 
@@ -19,7 +21,6 @@ echo "Installing dependencies..."
 
 apt-get install libtemplate-perl -y
 
-scriptName="nginx-cfg"
 installPath="/opt/$scriptName"
 binPath="/usr/local/bin/$scriptName"
 
