@@ -18,7 +18,7 @@ package LBOX::NginxCfg;
 
 our $SCRIPT_NAME = 'nginx-cfg';
 
-our $VERSION = '0.2.0';
+our $VERSION = '0.2.1';
 
 #use feature qw(say switch unicode_strings);
 use feature qw(say switch);
@@ -45,11 +45,7 @@ getopts('a:c:de:l:r:t:u:hnv:V', \%opts); # process command line switches into $o
 
 our $VERBOSITY = $opts{v} ||= 1;
 
-if ($opts{V})
-{
-	say "$SCRIPT_NAME version $VERSION";
-	exit;
-}
+if ($opts{V}) { say "$SCRIPT_NAME version $VERSION"; exit; }
 
 -f $CONFIG_FILE or fail("Sorry, the required config at '$CONFIG_FILE' can't be read.");
 
@@ -107,28 +103,30 @@ Options:
 
   -h                    Show this Help screen and exit.
 
-  -l 					List ALL active sites.
+  -l                    List ALL active sites.
   -l <site-name>        List the configuration file contents for the site named 'site-name'.
-  -l /<regex-pattern>/  List any active configuration files matching regex pattern /<regex-pattern>/.
+  -l /<regex-pattern>/  List any active configuration files matching regex pattern /<regex-pattern>/. (Not yet implemented.)
 
   -e <site-name>        Edit the configuration for the site named 'site-name'. 
 
   -E <Editor-name>      Specify a valid installed text editor for use with -e edit option.
-  						Default is $TEXT_EDITOR
+                        Default is '$TEXT_EDITOR'.
 
   -d/-n                 Do Not update the running Nginx configuration after using -a or -r.
 
   -r <site-name>        Remove the configuration for the site named 'site-name'.
 
   -t <config-template>  Optional configuration Template to use when adding/updating a site.
-  						Stored in '$TEMPLATES_DIR'.
+                        Stored in '$TEMPLATES_DIR'.
                         Default is the 'default' template.
 
   -u <upstream-URL>     The Upstream URL to or Amazon AWS S3 bucker name to proxy traffic to.
-  						Required when using the -a option.
+                        Required when using the -a option.
 
   -v <0-4>              Specify the verbosity of console output, higher numbers are more verbose.
-  						Default is 1.
+                        Default is 1.
+
+  -V                    Show Version info and exit.
 
 Examples:
 
@@ -260,9 +258,19 @@ sub addDomain
 
 sub listDomain
 {
-	my $nginx_filename = getConfigFilename(@_);
+	my $domain = shift;
 
-	logger("Showing '$nginx_filename':\n" . `cat $nginx_filename`);
+	if ($domain)
+	{
+		my $nginx_filename = getConfigFilename($domain);
+		logger("Showing '$nginx_filename':\n" . `cat $nginx_filename`);
+	}
+	else
+	{
+		my $enabled_dir = "$NGINX_CONFIG_DIR/sites-enabled";
+		logger("Showing all active configuration files in '$enabled_dir':\n" . `ls -1 $enabled_dir`);
+
+	}
 
 	return 1;
 }
