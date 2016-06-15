@@ -3,4 +3,4 @@ idempotent template-based Nginx configuration control
 
 To install:
 
-$ git clone https://github.com/TroyDConrad/nginx-cfg.git && cd nginx-cfg && sudo ./install.sh
+$ cd && rm -rf nginx-cfg && git clone https://github.com/TroyDConrad/nginx-cfg.git && cd nginx-cfg && sudo ./install.sh
