@@ -1,0 +1,12 @@
+### [% comment %] ###
+
+server {
+    listen      80;
+    listen      81;
+
+    server_name [% server_name %];
+
+    access_log  off;
+
+    return 301 [% proxy_pass_url %];
+}

@@ -18,7 +18,7 @@ package LBOX::NginxCfg;
 
 our $SCRIPT_NAME = 'nginx-cfg';
 
-our $VERSION = '0.2.1';
+our $VERSION = '0.2.2';
 
 #use feature qw(say switch unicode_strings);
 use feature qw(say switch);
@@ -41,7 +41,7 @@ our($NGINX_CONFIG_DIR,$TEMPLATES_DIR,$RETAINED_BACKUPS_CNT,$TEXT_EDITOR,$COMMON_
 
 my %opts = ();
 
-getopts('a:c:de:l:r:t:u:hnv:V', \%opts); # process command line switches into $opts{*} vars
+getopts('a:c:de:l:r:st:u:hnv:V', \%opts); # process command line switches into $opts{*} vars
 
 our $VERBOSITY = $opts{v} ||= 1;
 
@@ -70,7 +70,7 @@ if ($opts{a})
 	}
 	else
 	{
-		say "You must specify an upstream URL or AWS S3 bucket name with -u when using the -a (add) option.";
+		say "You must specify an upstream/redirect URL with -u when using the -a (add) option.";
 		$opts{h}++;
 	}
 }
@@ -92,11 +92,11 @@ Add, list and remove Nginx site configuration files.
 
 Usage:
 
-$SCRIPT_NAME [-a|-l|-r <site-name>] [-c comment] [-u <upstream-URL/S3-bucket>] [-t <config-template>] [-h] [-n] [-v <1-4>]
+$SCRIPT_NAME [-a|-e|-l|-r <site-name>] [-c comment] [-u <upstream/redirect/S3-bucket URL>] [-t <config-template>] [-d/n] [-v <1-4>]
 
 Options:
 
-  -a/-u <site-name>     Add a configuration for the site named 'site-name'.
+  -a <site-name>        Add a configuration for the site named 'site-name'.
                         If the configuration already exists, update it.
 
   -c <comment>          Optional comment string to add to top of configuration file.
@@ -105,14 +105,13 @@ Options:
 
   -l                    List ALL active sites.
   -l <site-name>        List the configuration file contents for the site named 'site-name'.
-  -l /<regex-pattern>/  List any active configuration files matching regex pattern /<regex-pattern>/. (Not yet implemented.)
 
   -e <site-name>        Edit the configuration for the site named 'site-name'. 
 
   -E <Editor-name>      Specify a valid installed text editor for use with -e edit option.
                         Default is '$TEXT_EDITOR'.
 
-  -d/-n                 Do Not update the running Nginx configuration after using -a or -r.
+  -d/-n                 Do Not update the running Nginx configuration after using -a, -e or -r.
 
   -r <site-name>        Remove the configuration for the site named 'site-name'.
 
@@ -120,7 +119,7 @@ Options:
                         Stored in '$TEMPLATES_DIR'.
                         Default is the 'default' template.
 
-  -u <upstream-URL>     The Upstream URL to or Amazon AWS S3 bucker name to proxy traffic to.
+  -u <URL>  		    The URL to proxy or redirect to (depending on template used.)
                         Required when using the -a option.
 
   -v <0-4>              Specify the verbosity of console output, higher numbers are more verbose.
@@ -130,15 +129,18 @@ Options:
 
 Examples:
 
-- Add/update configuration for 'some.example.com', proxied to URL 'somehost',
-  using the default template:
+- Add/update configuration for 'some.example.com', proxying traffic to local port 8000:
 
-	$SCRIPT_NAME -a some.example.com -u http://somehost
+	$SCRIPT_NAME -a some.example.com -u http://localhost:8000
 
-- Add/update configuration for 'another.example.com', proxied to URL 'anotherhost' port 8080,
-  using the 'ssl-redirect' template:
+- Add/update configuration for 'another.example.com', proxied to URL 'http://anotherhost',
+  using the 'ssl-redirect' template (which forces browser to use SSL):
 
 	$SCRIPT_NAME -a another.example.com -u http://anotherhost:8080 -t ssl-redirect
+
+- Add/update configuration for 'mail.example.com', which redirects to URL 'https://mail.google.com'.
+
+	$SCRIPT_NAME -a mail.example.com -u https://mail.google.com -t 301-redirect
 
 - List configuration for 'some.example.com':
 
@@ -148,6 +150,11 @@ Examples:
 
 	$SCRIPT_NAME -r another.example.com -n
 EOS
+
+# To implement:
+#
+#   -l /<regex-pattern>/  List any active configuration files matching regex pattern /<regex-pattern>/.
+#   -s                    Show what would be done ONLY, without making any changes.
 
 	exit;
 }
@@ -204,7 +211,11 @@ sub addDomain
 
 	my $template_file = "$TEMPLATES_DIR/$template_name";
 
-	-f $template_file or fail("Sorry, I can't find the required '$template_file' file!\nPlease make sure it's in '$TEMPLATES_DIR'.");
+	-f $template_file or fail(
+			"Sorry, I can't find the required '$template_file' file!\n" .
+			"Please make sure it's in '$TEMPLATES_DIR'." .
+			"Valid options are:\n" . `ls -1 $TEMPLATES_DIR` . "\n";
+		);
 
 	my $nginx_available_dir = "$NGINX_CONFIG_DIR/sites-available";
 	my $nginx_enabled_dir	= "$NGINX_CONFIG_DIR/sites-enabled";
