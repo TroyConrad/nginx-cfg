@@ -213,8 +213,8 @@ sub addDomain
 
 	-f $template_file or fail(
 			"Sorry, I can't find the required '$template_file' file!\n" .
-			"Please make sure it's in '$TEMPLATES_DIR'." .
-			"Valid options are:\n" . `ls -1 $TEMPLATES_DIR` . "\n";
+			"Please make sure it's in '$TEMPLATES_DIR'. Valid options are:\n" .
+			`ls -1 $TEMPLATES_DIR` . "\n"
 		);
 
 	my $nginx_available_dir = "$NGINX_CONFIG_DIR/sites-available";
